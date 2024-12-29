@@ -1,0 +1,60 @@
+// api/models/Post.js
+
+// Import the Mongoose library
+const mongoose = require('mongoose');
+
+// Import the ObjectId type from mongoose for referencing other documents.
+const { Schema } = mongoose;
+
+// Define the schema for social posts
+const postSchema = new Schema({
+    // Content of the social post, String, required
+    content: {
+        type: String,
+        required: true,
+        validate: {
+          validator: function(v) {
+            return v.length > 0;
+          },
+          message: 'Content must have at least 1 character.'
+        }
+    },
+    // Author of the social post, ObjectId referencing the User model, required
+    author: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'User', // References the User model defined in User.js
+        validate: {
+            validator: async function(value) {
+              try {
+                // Check if the provided author ObjectId exists in the User collection
+                const user = await mongoose.model('User').findById(value);
+                return !!user; // Returns true if user exist, else false
+              } catch (error) {
+                console.error("Error during author validation", error);
+                return false; // returns false if user does not exist
+              }
+            },
+            message: 'Author must be a valid User ID that exists in the User collection.'
+          }
+    },
+    // Timestamp of the social post, Date, default value is the current time
+    timestamp: {
+        type: Date,
+        default: Date.now,
+    }
+});
+
+// Add an index on the timestamp field for efficient querying
+postSchema.index({ timestamp: 1 });
+
+// Create and export the Mongoose model named 'Post'
+let Post;
+try {
+    Post = mongoose.model('Post', postSchema);
+} catch (error) {
+    console.error("Error creating Post model:", error);
+}
+
+
+module.exports = Post;
