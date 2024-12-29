@@ -1,0 +1,101 @@
+const express = require('express');
+
+/**
+ * Express error handling middleware.
+ * @param {Error} err - The error object.
+ * @param {express.Request} req - The Express request object.
+ * @param {express.Response} res - The Express response object.
+ * @param {express.NextFunction} next - The Express next function.
+ */
+const errorMiddleware = (err, req, res, next) => {
+  console.error(err);
+
+  if (err instanceof SyntaxError) {
+    res.status(400).contentType('application/json').json({
+      status: 400,
+      error: 'Bad Request',
+      message: err.message,
+    });
+    return;
+  }
+
+  if (err instanceof TypeError) {
+      res.status(400).contentType('application/json').json({
+          status: 400,
+          error: 'Bad Request',
+          message: err.message,
+      });
+      return;
+  }
+
+
+  res.status(500).contentType('application/json').json({
+    status: 500,
+    error: 'Internal Server Error',
+    message: err.message || 'An unexpected error occurred',
+  });
+};
+
+module.exports = errorMiddleware;
+
+// Example test cases
+if (process.env.NODE_ENV === 'test') {
+    const test = async () => {
+        const app = express();
+        app.use(express.json());
+        app.use(errorMiddleware);
+
+        // Simulate a syntax error
+        app.get('/syntax-error', () => {
+             throw new SyntaxError('Invalid JSON syntax');
+        });
+
+        // Simulate a type error
+        app.get('/type-error', () => {
+            const a = null;
+            a.toString();
+        });
+    
+        // Simulate a generic error
+        app.get('/generic-error', () => {
+          throw new Error('This is a test error');
+        });
+
+        const simulateRequest = async (url) => {
+             const response = await fetch(http://localhost:3000${url}, {
+                 method:'GET',
+             })
+             return await response.json();
+        }
+    
+        const startTestServer = async () => {
+            const server = app.listen(3000, () => {
+            });
+            
+            const syntaxErrorResponse = await simulateRequest('/syntax-error');
+            console.assert(syntaxErrorResponse.status === 400, 'Syntax error test failed: Status code mismatch');
+            console.assert(syntaxErrorResponse.error === 'Bad Request', 'Syntax error test failed: Error type mismatch');
+            console.assert(syntaxErrorResponse.message === 'Invalid JSON syntax', 'Syntax error test failed: Message mismatch');
+           
+            const typeErrorResponse = await simulateRequest('/type-error');
+            console.assert(typeErrorResponse.status === 400, 'Type error test failed: Status code mismatch');
+            console.assert(typeErrorResponse.error === 'Bad Request', 'Type error test failed: Error type mismatch');
+            console.assert(typeErrorResponse.message === "Cannot read properties of null (reading 'toString')", 'Type error test failed: Message mismatch');
+            
+             const genericErrorResponse = await simulateRequest('/generic-error');
+             console.assert(genericErrorResponse.status === 500, 'Generic error test failed: Status code mismatch');
+             console.assert(genericErrorResponse.error === 'Internal Server Error', 'Generic error test failed: Error type mismatch');
+            console.assert(genericErrorResponse.message === 'This is a test error', 'Generic error test failed: Message mismatch');
+            
+
+            server.close();
+        }
+
+        await startTestServer();
+
+        
+        console.log('All test cases passed!');
+      };
+
+    test();
+  }
