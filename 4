@@ -1,0 +1,75 @@
+"use strict";
+
+// Import required modules
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+
+// Load environment variables from .env file
+dotenv.config();
+
+// Import database configuration
+const dbConfig = require('./config/db');
+
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const goalRoutes = require('./routes/goalRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
+const socialRoutes = require('./routes/socialRoutes');
+
+// Import error handling middleware
+const errorMiddleware = require('./middleware/errorMiddleware');
+
+// Create an Express application
+const app = express();
+
+// Enable Cross-Origin Resource Sharing with specific options for the frontend
+const corsOptions = {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+// Configure Express to parse JSON and URL-encoded data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Asynchronous function to start the server
+async function startServer() {
+    try {
+        // Connect to MongoDB
+        await dbConfig();
+        console.log("Connected to MongoDB successfully.");
+
+
+        // Mount routes to the Express app, using express.Router middleware
+        app.use('/api/auth', authRoutes);
+        app.use('/api/goals', goalRoutes);
+        app.use('/api/tracking', trackingRoutes);
+        app.use('/api/social', socialRoutes);
+
+        // Use error handling middleware after routes
+        app.use(errorMiddleware);
+
+        // Get the port number from environment variables or default to 3000
+        const port = process.env.PORT || 3000;
+
+
+        // Start the server and listen on the specified port
+        app.listen(port, () => {
+            console.log(Server is running on port ${port});
+        });
+
+
+    } catch (error) {
+      console.error("Failed to connect to MongoDB or start server:", error);
+        process.exit(1);
+    }
+}
+
+// Start the server
+startServer();
