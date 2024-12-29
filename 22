@@ -1,0 +1,62 @@
+import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
+
+/**
+ * Formats a date string (ISO format) into a "MM/DD/YYYY" format.
+ * Returns 'Invalid Date' for invalid dates.
+ *
+ * @param {string} dateString - The date string in ISO format.
+ * @returns {string} The formatted date string or 'Invalid Date'.
+ */
+export function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'Invalid Date';
+  }
+
+  try {
+    const parsedDate = new Date(dateString);
+    if (isNaN(parsedDate.getTime())) {
+      return 'Invalid Date';
+    }
+    return format(parsedDate, 'MM/dd/yyyy');
+  } catch (error) {
+     return 'Invalid Date';
+  }
+}
+
+/**
+ * Generates a unique string ID using crypto.randomUUID.
+ * If crypto.randomUUID is not available (e.g., in non-Node.js environments), it returns null.
+ *
+ * @returns {string | null} A unique string ID or null if crypto.randomUUID is unavailable.
+ */
+export function generateUniqueId(): string | null {
+  try {
+      if (typeof randomUUID === 'function') {
+        return randomUUID();
+      }
+      return uuidv4()
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Sanitizes a string by escaping HTML special characters to prevent XSS vulnerabilities.
+ *
+ * @param {string | null | undefined} input - The string to sanitize.
+ * @returns {string} The sanitized string.
+ */
+export function sanitizeInput(input: string | null | undefined): string {
+  if (!input) {
+    return '';
+  }
+
+  return String(input)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
