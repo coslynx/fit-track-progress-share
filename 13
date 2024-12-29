@@ -1,0 +1,105 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const { ObjectId } = mongoose.Types;
+const dotenv = require('dotenv');
+dotenv.config();
+
+const { authMiddleware } = require('../middleware/authMiddleware');
+const { Activity } = require('../models/Activity');
+const { errorHandler } = require('../middleware/errorMiddleware');
+
+const router = express.Router();
+
+// Controller for adding a new activity log
+const addActivity = async (req, res) => {
+  try {
+    // 1. Verify JWT token
+    authMiddleware(req, res, async () => {
+      // Extract user ID from token
+      const userId = req.user._id;
+      
+       // 2. Validate and sanitize request body
+        const { goalId, activityType, activityValue, activityDate } = req.body;
+
+      if (!goalId || typeof goalId !== 'string' || !ObjectId.isValid(goalId)) {
+          return res.status(400).json({ statusCode: 400, message: 'Invalid or missing goalId.' });
+      }
+      if (!activityType || typeof activityType !== 'string') {
+          return res.status(400).json({ statusCode: 400, message: 'Invalid or missing activityType.' });
+      }
+        if (activityValue == null || typeof activityValue !== 'number' || isNaN(activityValue)) {
+            return res.status(400).json({ statusCode: 400, message: 'Invalid or missing activityValue.' });
+        }
+      if (!activityDate || typeof activityDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(activityDate)) {
+          return res.status(400).json({ statusCode: 400, message: 'Invalid or missing activityDate. Date format should be YYYY-MM-DD.' });
+      }
+
+      // 3. Create a new activity log document
+      const newActivity = new Activity({
+        userId: userId,
+        goalId: goalId,
+        activityType: activityType,
+        activityValue: activityValue,
+        activityDate: activityDate,
+      });
+
+      // 4. Save the activity log to the database
+      const savedActivity = await newActivity.save();
+
+      // 5. Return 201 Created status with the newly created activity object
+      res.status(201).json({ statusCode: 201, message: 'Activity log created successfully.', data: savedActivity });
+    });
+  } catch (error) {
+    // 6. Handle potential errors during creation, and return error response.
+     errorHandler(res, error, 500, 'Error creating activity log.');
+  }
+};
+
+
+// Controller for retrieving all activity logs for a goal
+const getActivityLog = async (req, res) => {
+  try {
+    // 1. Verify JWT token
+    authMiddleware(req, res, async () => {
+      // Extract user ID from token
+       const userId = req.user._id;
+
+       // 2. Extract and validate goalId from request parameters
+       const goalId = req.params.goalId;
+
+        if (!goalId || typeof goalId !== 'string' || !ObjectId.isValid(goalId)) {
+            return res.status(400).json({ statusCode: 400, message: 'Invalid or missing goalId.' });
+       }
+    
+       // 3. Retrieve all activity logs for the goalId and user ID
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        const skip = (page - 1) * limit;
+
+        const total = await Activity.countDocuments({userId: userId, goalId: goalId});
+        const activityLogs = await Activity.find({ userId: userId, goalId: goalId }).skip(skip).limit(limit).sort({activityDate:-1});
+
+          // 4. Return 200 OK with an array of activity log objects
+         res.status(200).json({
+             statusCode: 200,
+              message: 'Activity logs retrieved successfully.',
+              data: activityLogs,
+              page,
+             limit,
+             total,
+             totalPages: Math.ceil(total / limit)
+         });
+     });
+  } catch (error) {
+      // 5. Handle potential errors during retrieval
+        errorHandler(res, error, 500, 'Error retrieving activity logs.');
+  }
+};
+
+// Route for adding a new activity log
+router.post('/', addActivity);
+
+// Route for retrieving activity logs for a goal
+router.get('/:goalId', getActivityLog);
+
+module.exports = router;
