@@ -1,0 +1,99 @@
+import React, { useMemo } from 'react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  Label,
+} from 'recharts';
+import { format } from 'date-fns';
+import { Activity } from 'src/types/Activity';
+import {  sanitize } from 'src/utils/helpers';
+
+
+interface ActivityChartProps {
+  activities: Activity[];
+}
+
+const ActivityChart: React.FC<ActivityChartProps> = ({ activities }) => {
+    
+    const sanitizedActivities = useMemo(() => {
+        if(!activities) return [];
+        return activities.map(activity => ({
+            ...activity,
+            id: sanitize(activity.id),
+            date: sanitize(activity.date),
+            type: sanitize(activity.type)
+        }));
+    },[activities])
+
+    const chartData = useMemo(() => {
+        if (!sanitizedActivities || sanitizedActivities.length === 0) {
+          return null;
+        }
+    
+        try {
+          const groupedData: { [date: string]: { [type: string]: number } } = {};
+    
+            sanitizedActivities.forEach(activity => {
+            const formattedDate = format(new Date(activity.date), 'yyyy-MM-dd');
+            if (!groupedData[formattedDate]) {
+              groupedData[formattedDate] = {};
+            }
+            groupedData[formattedDate][activity.type] = (groupedData[formattedDate][activity.type] || 0) + activity.value;
+          });
+    
+          return Object.entries(groupedData).map(([date, types]) => {
+            const dataPoint: { date: string } & { [type: string]: number } = { date };
+            Object.entries(types).forEach(([type, value]) => {
+              dataPoint[type] = value;
+            });
+            return dataPoint;
+          });
+        } catch (error) {
+          console.error("Error processing chart data:", error);
+          return null;
+        }
+      }, [sanitizedActivities]);
+
+  if (!activities || activities.length === 0) {
+    return <div className="text-center p-4">No activity data available.</div>;
+  }
+    
+    if (!chartData){
+        return <div className="text-center p-4">Malformed activity data.</div>;
+    }
+
+
+  return (
+    <div className="w-full h-96">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+             dataKey="date" 
+                tick={{ fontSize: 12 }}
+                >
+                    <Label value="Date" offset={0} position="bottom" />
+                </XAxis>
+          <YAxis 
+              tick={{ fontSize: 12 }}
+                >
+                     <Label value="Value" angle={-90}  position="left" style={{textAnchor: 'middle'}} />
+                </YAxis>
+          <Tooltip />
+          <Legend />
+          {sanitizedActivities && [...new Set(sanitizedActivities.map((activity) => activity.type))].map((type) => (
+            <Bar key={type} dataKey={type} fill={#${Math.floor(Math.random()*16777215).toString(16)}} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default ActivityChart;
