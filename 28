@@ -1,0 +1,98 @@
+const express = require('express');
+const { ObjectId } = require('mongodb');
+const { Post } = require('../models/Post');
+
+const socialController = {
+    createPost: async (req, res) => {
+        try {
+            const { content } = req.body;
+
+            if (!content || typeof content !== 'string' || content.trim() === '') {
+                return res.status(400).json({ message: 'Content is required and must be a non-empty string.' });
+            }
+             // Basic sanitization - remove leading and trailing spaces
+            const sanitizedContent = content.trim();
+            
+            const newPost = new Post({
+                content: sanitizedContent,
+                createdAt: new Date()
+            });
+            
+            const savedPost = await newPost.save();
+            
+            res.status(201).json(savedPost);
+        } catch (error) {
+             console.error('Error creating post:', error);
+            res.status(500).json({ message: 'Error creating post.', error: error.message });
+        }
+    },
+
+    getPosts: async (req, res) => {
+        try {
+            const posts = await Post.find().sort({ createdAt: -1 });
+            res.status(200).json(posts);
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            res.status(500).json({ message: 'Error fetching posts.', error: error.message });
+        }
+    },
+
+    updatePost: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { content } = req.body;
+
+              if (!content || typeof content !== 'string' || content.trim() === '') {
+                return res.status(400).json({ message: 'Content is required and must be a non-empty string.' });
+             }
+
+            const sanitizedContent = content.trim();
+             if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: 'Invalid post ID' });
+              }
+            const updatedPost = await Post.findByIdAndUpdate(
+                id,
+                { content: sanitizedContent, updatedAt: new Date() },
+                { new: true }
+            );
+
+            if (!updatedPost) {
+                return res.status(404).json({ message: 'Post not found.' });
+            }
+
+            res.status(200).json(updatedPost);
+        } catch (error) {
+            console.error('Error updating post:', error);
+             if (error.name === 'CastError') {
+              return res.status(400).json({ message: 'Invalid post ID format' });
+            }
+            res.status(500).json({ message: 'Error updating post.', error: error.message });
+        }
+    },
+
+    deletePost: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+              if (!ObjectId.isValid(id)) {
+                 return res.status(400).json({ message: 'Invalid post ID' });
+               }
+
+            const deletedPost = await Post.findByIdAndDelete(id);
+
+            if (!deletedPost) {
+                return res.status(404).json({ message: 'Post not found.' });
+            }
+
+            res.status(200).json({ message: 'Post deleted successfully.' });
+        } catch (error) {
+           console.error('Error deleting post:', error);
+             if (error.name === 'CastError') {
+              return res.status(400).json({ message: 'Invalid post ID format' });
+            }
+            res.status(500).json({ message: 'Error deleting post.', error: error.message });
+        }
+    },
+};
+
+module.exports = socialController;
