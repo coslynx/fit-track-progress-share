@@ -1,0 +1,42 @@
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const { errorMiddleware } = require('./middleware/errorMiddleware');
+const authRoutes = require('./routes/authRoutes');
+const goalRoutes = require('./routes/goalRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
+const socialRoutes = require('./routes/socialRoutes');
+const { connectDB } = require('../config/db');
+const { auth } = require('../config/auth')
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/goals', authMiddleware, goalRoutes);
+app.use('/api/tracking', authMiddleware, trackingRoutes);
+app.use('/api/social', authMiddleware, socialRoutes);
+
+// Error handling middleware
+app.use(errorMiddleware);
+
+// Start server after DB connection
+const startServer = async () => {
+    try {
+        await connectDB();
+        app.listen(port, () => {
+            console.log(Server is running on port: ${port});
+        });
+    } catch (error) {
+        console.error('Database connection failed:', error);
+    }
+};
+
+startServer();
