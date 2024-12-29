@@ -1,0 +1,74 @@
+/**
+ * @fileoverview socialController.js - This file defines the controller for social post related API endpoints.
+ * It handles creating and retrieving social posts, with authentication using JWT middleware.
+ */
+
+const express = require('express');
+const mongoose = require('mongoose');
+const { Post } = require('../models/Post');
+const { authMiddleware } = require('../middleware/authMiddleware');
+const { errorMiddleware } = require('../middleware/errorMiddleware');
+
+const router = express.Router();
+
+/**
+ * @route   POST /api/posts
+ * @desc    Create a new social post.
+ * @access  Private (requires JWT authentication)
+ * @param   {express.Request} req - Express request object.
+ * @param   {express.Response} res - Express response object.
+ * @param   {express.NextFunction} next - Express next function.
+ * @returns {Promise<void>}
+ */
+router.post('/api/posts', authMiddleware, async (req, res, next) => {
+  try {
+    const { content } = req.body;
+
+    if (!content || content.trim() === '') {
+      const error = new Error("Content is required and can't be empty.");
+       error.statusCode = 400;
+       return next(error);
+    }
+
+      const userId = req.user.id;
+
+      const newPost = new Post({
+      userId,
+      content,
+      createdAt: new Date()
+    });
+
+    const savedPost = await newPost.save();
+
+    res.status(201).json(savedPost);
+      console.log('New social post created successfully.');
+  } catch (error) {
+    console.error('Error creating social post:', error);
+    error.statusCode = 500;
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/posts
+ * @desc    Retrieve all social posts.
+ * @access  Private (requires JWT authentication)
+ * @param   {express.Request} req - Express request object.
+ * @param   {express.Response} res - Express response object.
+ * @param   {express.NextFunction} next - Express next function.
+ * @returns {Promise<void>}
+ */
+router.get('/api/posts', authMiddleware, async (req, res, next) => {
+    try {
+      const posts = await Post.find().sort({ createdAt: -1 }).populate('userId', 'username');
+      res.status(200).json(posts);
+      console.log('Successfully retrieved all social posts.');
+    } catch (error) {
+      console.error('Error retrieving social posts:', error);
+      error.statusCode = 500;
+      next(error);
+    }
+  });
+
+
+module.exports = router;
