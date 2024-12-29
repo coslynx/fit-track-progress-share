@@ -1,0 +1,34 @@
+/* Rate limiting for API requests */
+const rateLimit = require('express-rate-limit');
+const express = require('express');
+
+const rateLimitMiddleware = () => {
+  try {
+    return rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit each IP to 100 requests per windowMs
+      handler: (req, res, next) => {
+          res.setHeader('Content-Type', 'application/json');
+        return res.status(429).send({
+          message: "Too many requests, please try again later",
+          status: 429,
+          timestamp: new Date().toISOString()
+        });
+      },
+      keyGenerator: (req) => {
+        return req.ip
+      },
+       standardHeaders: true, // Return rate limit info in the RateLimit-* headers
+      legacyHeaders: false, // Disable the X-RateLimit-* headers
+    });
+  } catch (error) {
+    console.error("Error setting up rate limiter:", error);
+    return (req, res, next) => {
+      const err = new Error("Rate limit setup error");
+          err.statusCode = 500;
+      next(err);
+    };
+  }
+};
+
+module.exports = rateLimitMiddleware;
