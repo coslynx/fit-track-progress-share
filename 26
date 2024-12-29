@@ -1,0 +1,40 @@
+const express = require('express');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+
+dotenv.config();
+
+const errorMiddleware = (err, req, res, next) => {
+  console.log("Error handling middleware triggered");
+  if (err instanceof Error) {
+    let statusCode = 500;
+    if (typeof err.statusCode === 'number') {
+        statusCode = err.statusCode;
+    }
+
+    let message;
+    if (err.name === 'ValidationError') {
+      message = Object.values(err.errors).map(e => e.message);
+      statusCode = 400;
+    } else {
+        message = err.message;
+    }
+
+     const errorResponse = {
+        message: message,
+        status: statusCode,
+    };
+
+    res.status(statusCode).json(errorResponse);
+    return;
+
+  } else {
+        console.error("Unexpected Error:", err);
+        console.error("Stack Trace:", err?.stack);
+         return res.status(500).json({ message: "Internal Server Error", status: 500 });
+  }
+
+};
+
+
+module.exports = errorMiddleware;
