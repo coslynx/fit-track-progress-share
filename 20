@@ -1,0 +1,73 @@
+/**
+ * @fileoverview Middleware for authenticating JWT tokens.
+ * @module authMiddleware
+ */
+
+const jwt = require('jsonwebtoken');
+const { secret } = require('../../config/auth');
+
+/**
+ * The payload for unauthorized responses.
+ * @constant
+ * @type {object}
+ */
+const UNAUTHORIZED_RESPONSE = { message: 'Unauthorized - Invalid token' };
+const UNAUTHORIZED_NO_TOKEN_RESPONSE = {message: 'Unauthorized - Token not provided'};
+const UNAUTHORIZED_VERIFICATION_RESPONSE = { message: 'Unauthorized - Token verification error' };
+
+/**
+ * Middleware function to verify JWT tokens from the Authorization header.
+ * @function authMiddleware
+ * @param {express.Request} req - Express request object.
+ * @param {express.Response} res - Express response object.
+ * @param {express.NextFunction} next - Express next function.
+ * @throws {Error} Will throw an error if token verification fails or if token is missing.
+ * @returns {void}
+ */
+const authMiddleware = (req, res, next) => {
+    try {
+        /**
+         * Extracts the token from the Authorization header.
+         * @type {string | undefined}
+         */
+        const authHeader = req.headers.authorization;
+       
+         if (!authHeader) {
+             return res.status(401).json(UNAUTHORIZED_NO_TOKEN_RESPONSE);
+         }
+        
+        if (!authHeader.startsWith('Bearer ')) {
+            return res.status(401).json(UNAUTHORIZED_RESPONSE);
+        }
+
+        /**
+         * Extracts the token from the auth header string.
+         * @type {string}
+         */
+        const token = authHeader.split(' ')[1];
+
+        /**
+         * Decodes and verifies the token using the secret from config.
+         * @type {object}
+         */
+        const decoded = jwt.verify(token, secret);
+       
+        /**
+         * Attaches decoded user data to the request object.
+         * @type {object}
+         */
+        req.user = decoded;
+    
+        next();
+    } catch (error) {
+         
+          if(error instanceof jwt.JsonWebTokenError){
+            return res.status(401).json(UNAUTHORIZED_RESPONSE)
+          }
+       
+            return res.status(401).json(UNAUTHORIZED_VERIFICATION_RESPONSE);
+       
+    }
+};
+
+module.exports = authMiddleware;
