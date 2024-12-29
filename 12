@@ -1,0 +1,89 @@
+// api/controllers/trackingController.js
+// This module handles API endpoints for managing user activity tracking.
+const express = require('express');
+const mongoose = require('mongoose');
+const { Activity } = require('../models/Activity'); // Import the Activity model
+const { authMiddleware } = require('../middleware/authMiddleware'); // Import auth middleware
+const { errorMiddleware } = require('../middleware/errorMiddleware'); // Import error handling middleware
+const { ObjectId } = mongoose.Types;
+
+const router = express.Router();
+
+// POST /api/activities: Handles creation of a new activity log.
+router.post('/', authMiddleware, async (req, res, next) => {
+  try {
+    // Extract data from request body
+    const { goalId, type, value, date } = req.body;
+
+    // Input validation
+    if (!goalId || !type || !value || !date) {
+      return res.status(400).json({ message: 'All fields are required: goalId, type, value, date' });
+    }
+
+    if (!ObjectId.isValid(goalId)) {
+      return res.status(400).json({ message: 'Invalid goalId' });
+    }
+
+    const allowedActivityTypes = ['exercise', 'nutrition', 'sleep'];
+    if (!allowedActivityTypes.includes(type)) {
+      return res.status(400).json({ message: 'Invalid activity type. Allowed types are: exercise, nutrition, sleep' });
+    }
+
+    const parsedValue = Number(value);
+     if (isNaN(parsedValue) || parsedValue <= 0) {
+         return res.status(400).json({ message: 'Invalid value. Value must be a number greater than 0' });
+     }
+
+
+     try {
+        new Date(date).toISOString()
+     } catch(err) {
+        return res.status(400).json({ message: 'Invalid date format. Date must be a valid date string.' });
+     }
+
+
+
+    // Create new activity document in MongoDB
+    const newActivity = new Activity({
+        goalId,
+      type,
+      value: parsedValue,
+      date,
+      userId: req.user._id,
+    });
+
+    const savedActivity = await newActivity.save();
+
+    // Send successful response with created activity
+    res.status(201).json(savedActivity);
+  } catch (error) {
+     console.error("Error in POST /api/activities:", error);
+    next(error);
+  }
+});
+
+// GET /api/activities/:goalId: Handles retrieval of activity logs for a specific goal.
+router.get('/:goalId', authMiddleware, async (req, res, next) => {
+  try {
+    // Extract and validate goalId from request parameters
+    const { goalId } = req.params;
+
+    if (!ObjectId.isValid(goalId)) {
+      return res.status(400).json({ message: 'Invalid goalId' });
+    }
+
+    // Fetch activity documents associated with the goalId
+    const activities = await Activity.find({ goalId, userId: req.user._id });
+
+    // Send successful response with the list of activities (empty array if none)
+    res.status(200).json(activities);
+  } catch (error) {
+    console.error("Error in GET /api/activities/:goalId:", error);
+    next(error);
+  }
+});
+
+// Error handling middleware for consistent JSON responses
+router.use(errorMiddleware);
+
+module.exports = router;
