@@ -1,0 +1,62 @@
+import mongoose from 'mongoose';
+
+const { Schema } = mongoose;
+
+const activitySchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'User',
+        index: true
+    },
+    goalId: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'Goal',
+        index: true
+    },
+    activityType: {
+        type: String,
+        required: true,
+        enum: ['running', 'walking', 'cycling', 'swimming', 'weightlifting']
+    },
+    duration: {
+        type: Number,
+        required: true,
+        min: 0,
+        validate: {
+             validator: Number.isInteger,
+             message: 'Duration must be a positive integer'
+        }
+
+    },
+    distance: {
+        type: Number,
+        min: 0,
+         validate: {
+             validator: function(value) {
+              return value === undefined || Number(value) >= 0;
+             },
+             message: 'Distance must be a positive number'
+         }
+        
+    },
+    date: {
+        type: Date,
+        required: true,
+        validate: {
+           validator: function(value) {
+                return value instanceof Date && !isNaN(value);
+            },
+           message: 'Date must be a valid date'
+        }
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+}, { timestamps: true });
+
+const Activity = mongoose.model('Activity', activitySchema);
+
+export default Activity;
