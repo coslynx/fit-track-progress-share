@@ -1,0 +1,45 @@
+// api/middleware/authMiddleware.js
+// This middleware verifies user authentication tokens from the 'Authorization' header.
+// It extracts the JWT, verifies it using the secret key, and attaches the user ID to the request object.
+// If token is invalid or missing, it responds with a 401 Unauthorized error.
+// It also handles any exceptions during token verification and responds with 500 error.
+
+const jwt = require('jsonwebtoken');
+const { secret } = require('../config/auth'); //Import secret from config
+require('dotenv').config({ path: './.env' }); // Load env variables from .env file
+
+const authMiddleware = (req, res, next) => {
+  // Attempt to extract the JWT token from the 'Authorization' header
+  const authHeader = req.headers.authorization;
+
+  // Check if the 'Authorization' header exists and starts with 'Bearer '
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Respond with a 401 Unauthorized error if the header is missing or doesn't start with 'Bearer '
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+
+  try {
+    // Extract the token from the Authorization header, removing 'Bearer ' prefix
+    const token = authHeader.split(' ')[1];
+
+    // Verify the token using the secret key from config
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+
+    // If verification is successful, extract the user ID from the token payload
+    req.userId = decodedToken.userId;
+
+    // Pass the request to the next middleware
+    next();
+  } catch (error) {
+      // If the token is invalid or an exception occurs during verification, respond with a 401 Unauthorized error
+      if (error instanceof jwt.JsonWebTokenError){
+         return res.status(401).json({ message: 'Unauthorized' });
+       }
+    // Respond with a 500 Internal Server Error and log the error if any exception occurred
+       console.error('Error during token verification:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = authMiddleware;
