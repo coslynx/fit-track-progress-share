@@ -1,0 +1,72 @@
+import { format, parse } from 'date-fns';
+
+/**
+ * Formats a date string or Date object to a specified format.
+ * @param {Date | string} date - The date to format (Date object or string).
+ * @param {string} [formatStr] - The format string to use (optional). Defaults to 'MMM dd, yyyy'.
+ * @returns {string} - The formatted date string, or a generic error message if date is invalid.
+ * @throws {Error} If an invalid date is provided and the default format is used
+ * @example
+ * formatDate(new Date('2024-03-15')); // Returns 'Mar 15, 2024'
+ * formatDate('2024-03-15', 'yyyy-MM-dd'); // Returns '2024-03-15'
+ * formatDate('invalid date') // Returns 'Invalid Date'
+ */
+export function formatDate(date: Date | string, formatStr: string = 'MMM dd, yyyy'): string {
+    try {
+      const parsedDate = typeof date === 'string' ? parse(date, 'yyyy-MM-dd', new Date()) : date;
+      if (isNaN(parsedDate.getTime())) {
+          return 'Invalid Date';
+      }
+      return format(parsedDate, formatStr);
+    } catch (error) {
+      return 'Invalid Date';
+    }
+}
+
+/**
+ * Formats a time string or Date object to a specified format.
+ * @param {Date | string} date - The date to format (Date object or string).
+ * @param {string} [formatStr] - The format string to use (optional). Defaults to 'hh:mm a'.
+ * @returns {string} - The formatted time string, or a generic error message if date is invalid.
+ * @throws {Error} If an invalid date is provided and the default format is used
+ * @example
+ * formatTime(new Date('2024-03-15 10:30:00')); // Returns '10:30 AM'
+ * formatTime('2024-03-15 22:45:00', 'HH:mm'); // Returns '22:45'
+ * formatTime('invalid time'); // Returns 'Invalid Time'
+ */
+export function formatTime(date: Date | string, formatStr: string = 'hh:mm a'): string {
+    try {
+        const parsedDate = typeof date === 'string' ? parse(date, 'yyyy-MM-dd HH:mm:ss', new Date()) : date;
+        if (isNaN(parsedDate.getTime())) {
+            return 'Invalid Time';
+        }
+        return format(parsedDate, formatStr);
+    } catch (error) {
+        return 'Invalid Time';
+    }
+}
+
+
+/**
+ * Formats a duration in seconds to a hh:mm:ss string.
+ * @param {number} durationInSeconds - The duration in seconds.
+ * @returns {string} - The formatted duration string, or '00:00:00' if the duration is invalid.
+ * @example
+ * formatDuration(3661); // Returns '01:01:01'
+ * formatDuration(60); // Returns '00:01:00'
+ * formatDuration(-10); // Returns '00:00:00'
+ */
+export function formatDuration(durationInSeconds: number): string {
+  if (typeof durationInSeconds !== 'number' || durationInSeconds < 0) {
+        return '00:00:00';
+    }
+    const hours = Math.floor(durationInSeconds / 3600);
+    const minutes = Math.floor((durationInSeconds % 3600) / 60);
+    const seconds = Math.floor(durationInSeconds % 60);
+
+    const formattedHours = String(hours).padStart(2, '0');
+    const formattedMinutes = String(minutes).padStart(2, '0');
+    const formattedSeconds = String(seconds).padStart(2, '0');
+
+    return ${formattedHours}:${formattedMinutes}:${formattedSeconds};
+}
