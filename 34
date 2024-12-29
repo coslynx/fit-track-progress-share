@@ -1,0 +1,45 @@
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');
+const goalRoutes = require('./routes/goalRoutes');
+const trackingRoutes = require('./routes/trackingRoutes');
+const socialRoutes = require('./routes/socialRoutes');
+const errorMiddleware = require('./middleware/errorMiddleware');
+
+dotenv.config();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const MONGODB_URI = process.env.MONGODB_URI;
+const PORT = process.env.PORT || 3000;
+
+if (!MONGODB_URI) {
+  console.error('Error: MONGODB_URI not found in environment variables.');
+    process.exit(1);
+}
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    
+    app.use('/api/auth', authRoutes);
+    app.use('/api/goals', goalRoutes);
+    app.use('/api/tracking', trackingRoutes);
+    app.use('/api/social', socialRoutes);
+
+    app.use(errorMiddleware);
+    
+    app.listen(PORT, () => {
+        console.log(Server started on port ${PORT});
+      });
+  })
+  .catch((err) => {
+    console.error('Error connecting to MongoDB:', err);
+    process.exit(1);
+  });
